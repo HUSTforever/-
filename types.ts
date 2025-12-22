@@ -20,6 +20,7 @@ export interface SelectedCard {
   positionName?: string;
 }
 
+// 塔罗占卜结果接口，用于解析 AI 返回的 JSON 数据
 export interface ReadingResult {
   summary: string;
   cardInterpretations: {

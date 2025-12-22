@@ -2,18 +2,19 @@
 import React, { useState } from 'react';
 import { SpreadType, TarotCard, SelectedCard, ReadingResult } from './types';
 import { SPREADS } from './constants';
-import { generateTarotReading } from './services/geminiService';
 import Deck from './components/Deck';
 import ReadingDisplay from './components/ReadingDisplay';
+// 导入 Gemini 占卜服务
+import { generateTarotReading } from './services/geminiService';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<'intro' | 'setup' | 'selection' | 'reading'>('intro');
   const [question, setQuestion] = useState('');
   const [spread, setSpread] = useState<SpreadType>(SpreadType.THREE_CARD);
   const [selectedCards, setSelectedCards] = useState<SelectedCard[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isMeditating, setIsMeditating] = useState(false);
+  // 存储 AI 占卜结果的状态
   const [readingResult, setReadingResult] = useState<ReadingResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const startSetup = () => setStep('setup');
   
@@ -24,13 +25,13 @@ const App: React.FC = () => {
     }
     setStep('selection');
     setSelectedCards([]);
+    setReadingResult(null);
   };
 
   const handleCardSelect = (card: TarotCard) => {
     const spreadInfo = SPREADS[spread];
     const nextIndex = selectedCards.length;
     
-    // 检查卡片是否已被选中，避免重复选择同一张（如果逻辑允许）
     if (selectedCards.some(sc => sc.card.id === card.id)) return;
 
     if (nextIndex < spreadInfo.slots) {
@@ -45,31 +46,34 @@ const App: React.FC = () => {
       setSelectedCards(newSelection);
 
       if (newSelection.length === spreadInfo.slots) {
-        getReading(newSelection);
+        // 当选完卡片后，触发 AI 占卜流程
+        performAIReading(newSelection);
       }
     }
   };
 
-  const getReading = async (cards: SelectedCard[]) => {
-    setLoading(true);
-    setError(null);
+  // 执行 AI 占卜，调用 Gemini 服务
+  const performAIReading = async (cards: SelectedCard[]) => {
+    setIsMeditating(true);
     try {
       const result = await generateTarotReading(question, cards);
       setReadingResult(result);
       setStep('reading');
-    } catch (err: any) {
-      setError(err.message || "宇宙能量中断，请重新尝试。");
+    } catch (error) {
+      console.error("占卜链接中断:", error);
+      // 如果 AI 失败，允许进入结果页查看本地牌面含义
+      setReadingResult(null);
+      setStep('reading');
     } finally {
-      setLoading(false);
+      setIsMeditating(false);
     }
   };
 
   const reset = () => {
     setStep('intro');
     setQuestion('');
-    setReadingResult(null);
     setSelectedCards([]);
-    setError(null);
+    setReadingResult(null);
   };
 
   return (
@@ -94,7 +98,7 @@ const App: React.FC = () => {
             </div>
             <h2 className="text-4xl md:text-6xl font-cinzel text-amber-200 font-bold tracking-tight">揭示你的命运</h2>
             <p className="text-xl text-slate-400 max-w-xl mx-auto italic">
-              “群星虽有预兆，却不束缚灵魂。通过古老奥秘寻求指引。”
+              “纯净的心灵是通往智慧的唯一钥匙。点击下方开启你的旅程。”
             </p>
             <button 
               onClick={startSetup}
@@ -118,7 +122,7 @@ const App: React.FC = () => {
                 <textarea 
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="例如：我未来半年的职业发展前景如何？"
+                  placeholder="例如：关于我的职业发展，塔罗能给我什么启示？"
                   className="w-full bg-[#0a0a14] border border-amber-900/50 rounded-lg p-4 text-slate-200 focus:border-amber-500 outline-none h-32 resize-none"
                 />
               </div>
@@ -138,11 +142,6 @@ const App: React.FC = () => {
                       `}
                     >
                       <span className="font-cinzel">{type}</span>
-                      <p className="text-[10px] opacity-60">
-                        {type === SpreadType.SINGLE ? '快速的日常指引' : 
-                         type === SpreadType.THREE_CARD ? '探索时间线：过去、现状、未来' : 
-                         '更深层次的五牌十字探索'}
-                      </p>
                     </button>
                   ))}
                 </div>
@@ -158,48 +157,41 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {step === 'selection' && !loading && (
+        {step === 'selection' && !isMeditating && (
           <Deck 
             onCardSelect={handleCardSelect} 
-            disabled={loading} 
+            disabled={isMeditating} 
             selectedCount={selectedCards.length}
             totalNeeded={SPREADS[spread].slots}
             selectedIds={selectedCards.map(sc => sc.card.id)}
           />
         )}
 
-        {loading && (
+        {isMeditating && (
           <div className="flex flex-col items-center space-y-6">
              <div className="relative">
                 <div className="w-24 h-24 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
-                <i className="fa-solid fa-eye absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl text-amber-500 animate-pulse"></i>
+                <i className="fa-solid fa-om absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-3xl text-amber-500 animate-pulse"></i>
              </div>
              <div className="text-center">
-                <h3 className="text-2xl font-cinzel text-amber-200">正在与星象共鸣...</h3>
-                <p className="text-slate-400 italic">“命运之线正在为你编织故事。”</p>
+                <h3 className="text-2xl font-cinzel text-amber-200">正在解读星象...</h3>
+                <p className="text-amber-500/40 text-sm mt-2">连接更高次元的智慧</p>
              </div>
           </div>
         )}
 
-        {step === 'reading' && readingResult && (
+        {step === 'reading' && (
           <ReadingDisplay 
-            reading={readingResult} 
             selectedCards={selectedCards} 
+            question={question}
             onReset={reset}
+            readingResult={readingResult}
           />
         )}
-
-        {error && (
-          <div className="text-center p-8 bg-red-950/20 border border-red-900/50 rounded-xl">
-            <p className="text-red-400 mb-4">{error}</p>
-            <button onClick={reset} className="text-amber-500 font-cinzel underline underline-offset-4">重试</button>
-          </div>
-        )}
-
       </main>
 
       <footer className="p-8 text-center text-slate-500 text-sm border-t border-amber-900/10">
-        <p className="font-cinzel">© 2024 奥秘塔罗 • 灵性见解应用</p>
+        <p className="font-cinzel">© 2025 奥秘塔罗 • 星辰增强版</p>
       </footer>
     </div>
   );
