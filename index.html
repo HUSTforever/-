@@ -71,6 +71,33 @@
     .animate-fadeIn {
       animation: fadeIn 0.8s ease-out forwards;
     }
+
+    /* Card Flight Animation */
+    @keyframes card-fly-up {
+      0% { 
+        opacity: 1;
+        transform: translate(var(--start-x), var(--start-y)) scale(1);
+      }
+      100% { 
+        opacity: 0;
+        transform: translate(var(--end-x), var(--end-y)) scale(0.3) rotate(15deg);
+      }
+    }
+    .animate-card-fly {
+      animation: card-fly-up 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+      pointer-events: none;
+      position: fixed;
+      z-index: 100;
+    }
+
+    @keyframes pulse-gold {
+      0% { box-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
+      50% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); }
+      100% { box-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
+    }
+    .slot-glow {
+      animation: pulse-gold 2s infinite ease-in-out;
+    }
   </style>
 <script type="importmap">
 {

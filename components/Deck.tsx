@@ -11,52 +11,133 @@ interface DeckProps {
   selectedIds: number[];
 }
 
+interface FlyingCard {
+  id: number;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}
+
 const Deck: React.FC<DeckProps> = ({ onCardSelect, disabled, selectedCount, totalNeeded, selectedIds }) => {
   const [shuffledDeck, setShuffledDeck] = useState<TarotCard[]>([]);
   const [hoveredCard, setHoveredCard] = useState<TarotCard | null>(null);
   const [lastSelectedCard, setLastSelectedCard] = useState<TarotCard | null>(null);
+  const [flyingCard, setFlyingCard] = useState<FlyingCard | null>(null);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
+  const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const newDeck = [...DECK].sort(() => Math.random() - 0.5);
     setShuffledDeck(newDeck);
   }, []);
 
-  const handleCardClick = (card: TarotCard) => {
-    if (!disabled && selectedCount < totalNeeded && !selectedIds.includes(card.id)) {
+  const handleCardClick = (card: TarotCard, event: React.MouseEvent) => {
+    if (disabled || selectedCount >= totalNeeded || selectedIds.includes(card.id)) return;
+
+    // 获取点击卡片的位置
+    const cardRect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    
+    // 获取目标槽位的位置
+    const targetSlotIndex = selectedCount;
+    const slotElement = slotRefs.current[targetSlotIndex];
+    if (slotElement) {
+      const slotRect = slotElement.getBoundingClientRect();
+      
+      setFlyingCard({
+        id: card.id,
+        startX: cardRect.left,
+        startY: cardRect.top,
+        endX: slotRect.left,
+        endY: slotRect.top
+      });
+
+      // 动画结束后正式触发选择
+      setTimeout(() => {
+        onCardSelect(card);
+        setLastSelectedCard(card);
+        setFlyingCard(null);
+      }, 750);
+    } else {
       onCardSelect(card);
       setLastSelectedCard(card);
     }
   };
 
-  // 决定顶部信息栏显示哪张牌的信息
   const displayCard = hoveredCard || lastSelectedCard;
 
   return (
-    <div className="w-full py-12 px-4 relative flex flex-col items-center">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-cinzel text-amber-200">
+    <div className="w-full py-8 px-4 relative flex flex-col items-center">
+      {/* 占卜槽位：卡片飞向的目标区域 */}
+      <div className="text-center mb-10 w-full max-w-4xl">
+        <h2 className="text-2xl font-cinzel text-amber-200 mb-6 tracking-widest">
           {selectedCount < totalNeeded 
-            ? `请从星阵中挑选 ${totalNeeded - selectedCount} 张牌`
-            : "所有牌已选好，正在开启神谕..."}
+            ? `请挑选 ${totalNeeded - selectedCount} 枚命运之种`
+            : "阵法已成，共鸣中..."}
         </h2>
-        <div className="flex justify-center gap-2 mt-4">
+        
+        <div className="flex justify-center gap-6 md:gap-10">
           {Array.from({ length: totalNeeded }).map((_, i) => (
             <div 
               key={i} 
-              className={`w-3 h-3 rounded-full border border-amber-500/50 transition-all duration-500 ${i < selectedCount ? 'bg-amber-400 shadow-[0_0_12px_#fbbf24]' : 'bg-transparent scale-90'}`}
-            />
+              ref={el => slotRefs.current[i] = el}
+              className={`
+                w-16 h-28 md:w-24 md:h-40 rounded-lg border-2 transition-all duration-700 relative
+                ${i < selectedCount 
+                  ? 'border-amber-400 bg-amber-950/40 shadow-[0_0_15px_rgba(251,191,36,0.4)]' 
+                  : 'border-amber-900/20 bg-black/20'}
+              `}
+            >
+              {/* 槽位背景装饰 */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <i className={`fa-solid fa-bahai text-xl transition-all duration-500 ${i < selectedCount ? 'text-amber-500 opacity-80 scale-110' : 'text-amber-900/20'}`}></i>
+              </div>
+
+              {/* 已填充状态 */}
+              {i < selectedCount && (
+                <div className="absolute inset-0 p-1 animate-fadeIn">
+                   <div className="w-full h-full bg-[#1a1a3a] rounded-md border border-amber-500/30 flex items-center justify-center">
+                     <div className="absolute inset-0 card-shimmer opacity-20"></div>
+                     <i className="fa-solid fa-moon text-amber-500/40 text-sm"></i>
+                   </div>
+                </div>
+              )}
+              
+              <div className={`absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-cinzel text-amber-500/40 uppercase tracking-tighter whitespace-nowrap`}>
+                Slot {i + 1}
+              </div>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* 信息展示区域：显示悬停或选中的卡片含义 */}
+      {/* 飞行的卡片虚影 */}
+      {flyingCard && (
+        <div 
+          className="animate-card-fly w-36 h-60 md:w-44 md:h-72 bg-[#1e1b4b] rounded-xl border-2 border-amber-400"
+          style={{
+            '--start-x': `${flyingCard.startX}px`,
+            '--start-y': `${flyingCard.startY}px`,
+            '--end-x': `${flyingCard.endX}px`,
+            '--end-y': `${flyingCard.endY}px`,
+            top: 0,
+            left: 0,
+          } as any}
+        >
+          <div className="w-full h-full bg-[#0c0c1e] flex items-center justify-center p-3">
+             <div className="w-full h-full border border-amber-600/30 rounded-lg bg-[#1a1a3a]"></div>
+          </div>
+        </div>
+      )}
+
+      {/* 选牌信息展示 */}
       <div className={`h-24 transition-all duration-500 flex flex-col items-center mb-6 ${displayCard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         {displayCard && (
           <div className="text-center bg-black/60 backdrop-blur-xl px-8 py-4 rounded-2xl border border-amber-500/50 shadow-[0_0_40px_rgba(251,191,36,0.2)] max-w-xl animate-fadeIn">
             <div className="flex items-center justify-center gap-3 mb-1">
-               <span className="text-amber-500 text-xs uppercase tracking-widest font-cinzel">
-                 {hoveredCard ? '探索中' : '已选择'}
+               <span className="text-amber-500 text-[10px] uppercase tracking-[0.2em] font-cinzel">
+                 {hoveredCard ? '星辰指引' : '契约已成'}
                </span>
                <div className="h-px w-8 bg-amber-500/30"></div>
                <p className="text-amber-300 font-cinzel font-bold text-xl">{displayCard.name}</p>
@@ -72,10 +153,12 @@ const Deck: React.FC<DeckProps> = ({ onCardSelect, disabled, selectedCount, tota
       >
         {shuffledDeck.map((card, idx) => {
           const isSelected = selectedIds.includes(card.id);
+          const isAnimating = flyingCard?.id === card.id;
+
           return (
             <div 
               key={`${card.id}-${idx}`}
-              onClick={() => handleCardClick(card)}
+              onClick={(e) => handleCardClick(card, e)}
               onMouseEnter={() => setHoveredCard(card)}
               onMouseLeave={() => setHoveredCard(null)}
               className={`
@@ -85,50 +168,28 @@ const Deck: React.FC<DeckProps> = ({ onCardSelect, disabled, selectedCount, tota
                 ${isSelected 
                   ? 'border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.6)] -translate-y-8 scale-110 z-10' 
                   : 'border-amber-900/40 hover:border-amber-500 hover:-translate-y-6 hover:rotate-2 hover:shadow-[0_0_20px_rgba(251,191,36,0.2)] bg-[#1e1b4b]'}
-                ${disabled && !isSelected ? 'opacity-40 cursor-not-allowed grayscale' : 'opacity-100'}
+                ${(disabled || isAnimating) && !isSelected ? 'opacity-40 cursor-not-allowed grayscale' : 'opacity-100'}
               `}
             >
-              {/* 卡片背面：更具象的神秘主义图案 */}
               <div className="absolute inset-0 bg-[#0c0c1e] flex items-center justify-center p-3">
                  <div className="w-full h-full border-2 border-amber-600/30 rounded-lg flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#1a1a3a] via-[#0c0c1e] to-[#2a1a3a]">
                    <div className="absolute inset-0 card-shimmer opacity-30"></div>
                    
-                   {/* 背景几何星图 */}
                    <div className="absolute inset-0 opacity-20">
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 border border-amber-500/40 rounded-full animate-[spin_30s_linear_infinite]"></div>
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-amber-500/20 rotate-45"></div>
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-amber-500/20 -rotate-45"></div>
                    </div>
 
-                   {/* 核心象征符号：曼陀罗与眼睛 */}
                    <div className="flex flex-col items-center relative z-10">
-                      <div className="w-16 h-16 border border-amber-500/40 rounded-full flex items-center justify-center mb-2 bg-amber-950/20 backdrop-blur-sm">
-                        <i className="fa-solid fa-eye text-2xl text-amber-500/60 animate-pulse"></i>
-                      </div>
-                      <div className="flex gap-3 text-amber-600/40">
-                        <i className="fa-solid fa-moon text-xs"></i>
-                        <i className="fa-solid fa-star text-[10px] animate-pulse"></i>
-                        <i className="fa-solid fa-sun text-xs"></i>
+                      <div className="w-16 h-16 border border-amber-500/40 rounded-full flex items-center justify-center mb-2 bg-amber-950/20 backdrop-blur-sm transition-transform group-hover:scale-110">
+                        <i className={`fa-solid fa-eye text-2xl text-amber-500/60 ${isSelected ? 'animate-none' : 'animate-pulse'}`}></i>
                       </div>
                    </div>
 
-                   {/* 选中效果叠加 */}
                    {isSelected && (
                      <div className="absolute inset-0 bg-amber-500/20 flex flex-col items-center justify-center backdrop-blur-[2px] animate-fadeIn">
-                       <div className="bg-amber-400 text-black font-bold font-cinzel text-[11px] px-3 py-1 rounded shadow-[0_0_15px_rgba(0,0,0,0.5)] mb-4">
-                         命中所属
-                       </div>
-                       <div className="w-12 h-12 rounded-full border-2 border-amber-400 flex items-center justify-center shadow-[0_0_20px_rgba(251,191,36,0.4)]">
-                         <i className="fa-solid fa-check text-2xl text-amber-400"></i>
-                       </div>
+                       <i className="fa-solid fa-check text-2xl text-amber-400 shadow-sm"></i>
                      </div>
                    )}
-
-                   {/* 四角神秘符号 */}
-                   <div className="absolute top-1.5 left-1.5 opacity-40"><i className="fa-solid fa-ankh text-[10px] text-amber-500"></i></div>
-                   <div className="absolute top-1.5 right-1.5 opacity-40"><i className="fa-solid fa-om text-[10px] text-amber-500"></i></div>
-                   <div className="absolute bottom-1.5 left-1.5 opacity-40"><i className="fa-solid fa-yin-yang text-[10px] text-amber-500"></i></div>
-                   <div className="absolute bottom-1.5 right-1.5 opacity-40"><i className="fa-solid fa-dharmachakra text-[10px] text-amber-500"></i></div>
                  </div>
               </div>
             </div>
@@ -139,7 +200,7 @@ const Deck: React.FC<DeckProps> = ({ onCardSelect, disabled, selectedCount, tota
       <div className="flex flex-col items-center mt-4 gap-2">
         <div className="flex items-center gap-4 text-amber-500/30 text-xs">
           <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-500/30"></div>
-          <p className="font-cinzel tracking-[0.3em] uppercase">拨动命运之弦</p>
+          <p className="font-cinzel tracking-[0.3em] uppercase">触碰虚空 寻获真理</p>
           <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-500/30"></div>
         </div>
       </div>
