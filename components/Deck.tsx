@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { TarotCard } from '../types';
 import { DECK } from '../constants';
@@ -81,7 +80,7 @@ const Deck: React.FC<DeckProps> = ({ onCardSelect, disabled, selectedCount, tota
           {Array.from({ length: totalNeeded }).map((_, i) => (
             <div 
               key={i} 
-              ref={el => slotRefs.current[i] = el}
+              ref={el => { slotRefs.current[i] = el; }}
               className={`
                 w-16 h-28 md:w-24 md:h-40 rounded-lg border-2 transition-all duration-700 relative
                 ${i < selectedCount 

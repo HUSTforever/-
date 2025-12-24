@@ -1,15 +1,14 @@
 
 import React from 'react';
-import { SelectedCard, ReadingResult } from '../types';
+import { SelectedCard } from '../types';
 
 interface ReadingDisplayProps {
   selectedCards: SelectedCard[];
   question: string;
   onReset: () => void;
-  readingResult: ReadingResult | null;
 }
 
-const ReadingDisplay: React.FC<ReadingDisplayProps> = ({ selectedCards, question, onReset, readingResult }) => {
+const ReadingDisplay: React.FC<ReadingDisplayProps> = ({ selectedCards, question, onReset }) => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-12">
       <div className="text-center space-y-4">
@@ -58,7 +57,7 @@ const ReadingDisplay: React.FC<ReadingDisplayProps> = ({ selectedCards, question
               </div>
             </div>
 
-            {/* 卡片的基础含义展示 */}
+            {/* 本地含义展示 */}
             <div className="mt-8 text-center max-w-[180px] animate-fadeIn" style={{ animationDelay: `${(idx * 300) + 1200}ms` }}>
               <p className="text-sm text-slate-300 leading-relaxed italic">
                 {item.isReversed ? `逆位指引：${item.card.meaning} 可能面临阻碍或需要反向思考。` : item.card.meaning}
@@ -68,38 +67,7 @@ const ReadingDisplay: React.FC<ReadingDisplayProps> = ({ selectedCards, question
         ))}
       </div>
 
-      {/* AI 深度解读展示 */}
-      {readingResult && (
-        <div className="mt-16 space-y-12 animate-fadeIn" style={{ animationDelay: '2000ms' }}>
-          <div className="bg-amber-950/20 p-8 rounded-3xl border border-amber-500/30 backdrop-blur-md shadow-2xl">
-            <h3 className="text-2xl font-cinzel text-amber-400 mb-6 flex items-center gap-3">
-              <i className="fa-solid fa-sparkles"></i> 整体总结
-            </h3>
-            <p className="text-amber-100 text-lg leading-relaxed italic">“{readingResult.summary}”</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {readingResult.cardInterpretations.map((interp, idx) => (
-              <div key={idx} className="bg-black/40 p-6 rounded-2xl border border-amber-900/40 hover:border-amber-500/30 transition-colors">
-                <h4 className="text-amber-500 font-cinzel font-bold mb-3 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-amber-500 rounded-full"></span>
-                  {interp.cardName}
-                </h4>
-                <p className="text-slate-300 text-sm leading-relaxed">{interp.interpretation}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-indigo-950/30 p-8 rounded-3xl border border-indigo-500/30 shadow-2xl">
-            <h3 className="text-2xl font-cinzel text-indigo-300 mb-6 flex items-center gap-3">
-              <i className="fa-solid fa-wand-magic-sparkles"></i> 灵性建议
-            </h3>
-            <p className="text-slate-200 leading-relaxed">{readingResult.guidance}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-center pt-12 pb-20">
+      <div className="flex justify-center pt-12">
         <button 
           onClick={onReset}
           className="px-12 py-4 bg-transparent border-2 border-amber-600 text-amber-500 rounded-full font-cinzel font-bold hover:bg-amber-600 hover:text-black transition-all shadow-[0_0_15px_rgba(217,119,6,0.2)]"

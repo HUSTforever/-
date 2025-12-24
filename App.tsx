@@ -1,11 +1,9 @@
 
 import React, { useState } from 'react';
-import { SpreadType, TarotCard, SelectedCard, ReadingResult } from './types';
+import { SpreadType, TarotCard, SelectedCard } from './types';
 import { SPREADS } from './constants';
 import Deck from './components/Deck';
 import ReadingDisplay from './components/ReadingDisplay';
-// 导入 Gemini 占卜服务
-import { generateTarotReading } from './services/geminiService';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<'intro' | 'setup' | 'selection' | 'reading'>('intro');
@@ -13,8 +11,6 @@ const App: React.FC = () => {
   const [spread, setSpread] = useState<SpreadType>(SpreadType.THREE_CARD);
   const [selectedCards, setSelectedCards] = useState<SelectedCard[]>([]);
   const [isMeditating, setIsMeditating] = useState(false);
-  // 存储 AI 占卜结果的状态
-  const [readingResult, setReadingResult] = useState<ReadingResult | null>(null);
 
   const startSetup = () => setStep('setup');
   
@@ -25,7 +21,6 @@ const App: React.FC = () => {
     }
     setStep('selection');
     setSelectedCards([]);
-    setReadingResult(null);
   };
 
   const handleCardSelect = (card: TarotCard) => {
@@ -46,34 +41,24 @@ const App: React.FC = () => {
       setSelectedCards(newSelection);
 
       if (newSelection.length === spreadInfo.slots) {
-        // 当选完卡片后，触发 AI 占卜流程
-        performAIReading(newSelection);
+        showLocalReading();
       }
     }
   };
 
-  // 执行 AI 占卜，调用 Gemini 服务
-  const performAIReading = async (cards: SelectedCard[]) => {
+  const showLocalReading = () => {
     setIsMeditating(true);
-    try {
-      const result = await generateTarotReading(question, cards);
-      setReadingResult(result);
-      setStep('reading');
-    } catch (error) {
-      console.error("占卜链接中断:", error);
-      // 如果 AI 失败，允许进入结果页查看本地牌面含义
-      setReadingResult(null);
-      setStep('reading');
-    } finally {
+    // 模拟一段简短的“冥想/洗牌”时间，增强仪式感，无需 API 密钥
+    setTimeout(() => {
       setIsMeditating(false);
-    }
+      setStep('reading');
+    }, 1500);
   };
 
   const reset = () => {
     setStep('intro');
     setQuestion('');
     setSelectedCards([]);
-    setReadingResult(null);
   };
 
   return (
@@ -185,13 +170,12 @@ const App: React.FC = () => {
             selectedCards={selectedCards} 
             question={question}
             onReset={reset}
-            readingResult={readingResult}
           />
         )}
       </main>
 
       <footer className="p-8 text-center text-slate-500 text-sm border-t border-amber-900/10">
-        <p className="font-cinzel">© 2025 奥秘塔罗 • 星辰增强版</p>
+        <p className="font-cinzel">© 2024 奥秘塔罗 • 纯净本地版</p>
       </footer>
     </div>
   );
